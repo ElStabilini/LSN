@@ -1,0 +1,76 @@
+//Random numbers
+#include "random.h"
+#include <fstream>
+#include <ostream>
+#include <vector>
+
+using namespace std;
+
+//funzioni per l'esercizio
+void InitializeRND(Random rnd);
+double Metropolis(Random& rnd, double x);
+double Psi(double x);
+double Psi2(double x);
+double V(double x);
+double derivative(double x);
+double K(double x);
+double Eloc(double x);
+double Estrazione(Random &rnd, double); //Estrazione per importance sampling
+double Evol(Random &rnd, double beta); //Simulated annealing
+double Integral(Random &rnd, double M, double L); //Integrazione con importance sampling
+
+//Evol ha per argomenti la temperatura (per applicare l'algoritmo faccio variare la temepratura fino a che non raggiungo una precisione fissata con la stima del minimo)
+
+//STATISTICA A BLOCCHI
+template <typename T> double error( const vector<T> & AV, const vector<T> & AV2, int n);
+template <typename T> double BlockStat(int K, const vector<T>& data, vector<T>& ave, vector<T>& ave2, vector<T>& sum_prog, vector<T>& sum2_prog, vector<T>& err_prog);
+template <typename T> void Blocco(double sum, int L, vector<T>& ave, vector<T>& ave2);
+template <typename T> void Progressione(vector<T>& ave, vector<T>& ave2, vector<T>& sum_prog, vector<T>& sum2_prog, vector<T>& err_prog);
+
+//STAMPARE I RISULTATI SU FILE
+template <typename T>void Print(const vector<T>& sum_prog, const vector<T>& err_prog, const vector<T>& ave, const vector<T>& err, const char* NomeFile);
+template <typename T>void PrintV(const vector<T>& vec, const char* NomeFile);
+
+//variabili
+Random rnd;
+double accepted_ann, accepted_met, attempted_ann, attempted_met;
+double mu = 0.5;
+double sigma = 0.5;
+double muold, sigmaold;
+double mu2 = mu*mu;
+double sigma2 = sigma*sigma;
+double hbar = 1;
+double m = 1;
+double beta, delta_ann;
+double eq_step;
+
+
+ofstream H_out, mu_out, sigma_out;
+
+#define PREC 0.015
+#define delta 2
+
+
+
+/* SCHEMA ALGORITMO:
+
+* Ho N blocchi
+	* Ogni blocco è il risultato di una stima ottenuta da L elementi (quindi ho un numero totale L*N di elementi che devo calcolare)
+	* All'interno di ciascun blocco ripeto l'intera procedura fino a che non ragginugo la precisione richiesta
+		* per ogni elemento devo calcolare una stima dell'integrale con importance sampling
+		
+		quindi BloccoEvol >> singolo Evol >> singola stima H >> calcolo integrale >> campionamento con metroplis
+
+*/
+
+CC = g++
+CFLAGS = -Wall -O3 --std=c++11
+
+Esercizio8.exe : SimAnnealing.o random.o
+	$(CC) random.o SimAnnealing.o -o Esercizio8.exe
+SimAnnealing.o : SimAnnealing.cpp
+	$(CC) -c SimAnnealing.cpp -o SimAnnealing.o $(CFLAGS)
+random.o : random.cpp random.h
+	$(CC) -c random.cpp -o random.o $(CFLAGS)
+clean :
+	rm *.o Esercizio8.exe

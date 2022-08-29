@@ -1,0 +1,324 @@
+#include <iostream>
+#include <fstream>
+#include <ostream>
+#include <cmath>
+#include <iomanip>
+#include <vector>
+#include "SimAnnealing.h"
+
+#define _USE_MATH_DEFINES
+
+using namespace std;
+
+int main() { 
+
+	InitializeRND();
+	
+	//apertura file output
+	H_out.open("HT.dat");
+	mu_out.open("mu.dat");
+	sigma_out.open("sigma.dat");
+	
+	vector<double> aveSA, aveSA2, errSA, sumSA_prog, sumSA2_prog, errSA_prog; //vettori per blocchi H
+	vector<double> ave_mu, ave2_mu, sum_mu_prog, sum2_mu_prog, err_mu, err_mu_prog;//vettori per blocchi annealing
+	vector<double> ave_sigma, ave2_sigma, sum_sigma_prog, sum2_sigma_prog, err_sigma, err_sigma_prog;//vettori per blocchi
+	vector<double> betas; //vetori parametri
+	double betamin = 1;
+  double dbeta = 2.5;
+  double err = 0.5;
+	int iter = 0;
+	int k=0; //indice dei blocchi per l'annealing
+	int L=15;
+	
+
+	//in questo caso non ho un numero di blocchi fissato a priori, continuo ad aggiungere blocchi fino a che la mia miglior stima non ha un errore pari almeno all'incertezza richiesta
+	//in questo caso quello che fisso è la lunghezza dei blocchi 
+	
+	//OSSERVAZIONE: per ogni temperatura ho un solo blocco che ottengo come stima da più misure
+	while(err >= PREC) {
+		iter++;
+		cout << "simulazione per blocco " << k << endl;
+			
+		//preparo lo spazio per quello che devo aggiungere
+				
+		betas.push_back(betamin + k*dbeta); // Aggiorno la temperatura
+    double beta = betas.at(k);
+    delta_ann = 1./sqrt(beta);
+    double sum_H=0, sum_mu=0, sum_sigma=0;
+    
+    //ciclo all'interno del blocco a temperartura fissata
+		for(int j=0; j<L; j++){
+			
+			cout << "j = " << j << endl;
+      double H = Evol(rnd, beta); //NB: evol fa cambiare i valori dei due parametri
+      //aggiorno i valori medi delle grandezze 
+      sum_H += H;
+      sum_mu += mu;
+      sum_sigma += sigma;
+    }
+    
+    cout << "sum H: " << sum_H << endl;
+    cout << "sum mu: " << sum_mu << endl;
+    cout << "sum sigma: " << sum_sigma << endl;
+          
+		Blocco(sum_H, L, aveSA, aveSA2);
+		Blocco(sum_mu, L, ave_mu, ave2_mu);
+		Blocco(sum_sigma, L, ave_sigma, ave2_sigma);
+    
+   
+    errSA.push_back( sqrt(aveSA2.at(k) - pow(aveSA.at(k), 2)) ); //dev std H a temp. costante
+    cout << "media: " << aveSA.at(k) << ", media quadra: " << aveSA2.at(k) << endl;
+    err = errSA.at(k);
+    cout << "err: " << sqrt(aveSA2.at(k) - pow(aveSA.at(k), 2)) << endl;
+    err_mu.push_back( sqrt(ave2_mu.at(k) - pow(ave_mu.at(k), 2)) );
+    err_sigma.push_back( sqrt(ave2_sigma.at(k) - pow(ave_sigma.at(k), 2)) );
+
+		//stime progressive
+		cout << "inizio stime progressive" << endl;	
+		for(int i=0; i<k; i++) {
+    	sumSA_prog.push_back(0);
+    	sumSA2_prog.push_back(0);
+    	
+    	sum_mu_prog.push_back(0);
+    	sum2_mu_prog.push_back(0);
+    	
+    	sum_sigma_prog.push_back(0);
+    	sum2_sigma_prog.push_back(0);
+			
+			for(int j=0; j<i+1; j++) {
+    		sumSA_prog.at(i) += aveSA.at(j);
+    		sumSA2_prog.at(i) += aveSA2.at(j);
+    	
+    		sum_mu_prog.at(i) += ave_mu.at(j);
+    		sum2_mu_prog.at(i) += ave2_mu.at(j);
+    		    		
+    		sum_sigma_prog.at(i) += ave_sigma.at(j);
+    		sum2_sigma_prog.at(i) += ave2_sigma.at(j);
+    	}
+    
+  
+    sumSA_prog.at(i) /= (i+1); //Cumulative average
+    sumSA2_prog.at(i) /= (i+1); //Cumulative square average
+    errSA_prog.push_back( error(sumSA_prog, sumSA2_prog, i) );
+    
+    sum_mu_prog.at(i) /= (i+1); //Cumulative average
+    sum2_mu_prog.at(i) /= (i+1); //Cumulative square average
+    err_mu_prog.push_back( error(sumSA_prog, sumSA2_prog, i) );
+    
+    sum_sigma_prog.at(i) /= (i+1); //Cumulative average
+    sum2_sigma_prog.at(i) /= (i+1); //Cumulative square average
+    err_sigma_prog.push_back( error(sum_sigma_prog, sum2_sigma_prog, i) );	
+ 		}
+ 		
+	H_out << k << "," /*<< sumSA_prog.at(k) << "," << errSA_prog.at(k) << ","*/ << aveSA.at(k) << "," << err << endl;
+		mu_out << k << "," /*<< sum_mu_prog.at(k) << "," << err_mu_prog.at(k) << ","*/ << ave_mu.at(k) << "," << err_mu.at(k) << endl;
+		sigma_out << k << "," /*<< sum_sigma_prog.at(k) << "," << err_sigma_prog.at(k) << "," */<< ave_sigma.at(k) << "," << err_sigma.at(k) << endl;
+		
+		k++;	
+		cout << "==============================================================" << endl;
+		cout << endl;
+		
+		if(iter==50) { //inserire controllo su iterazioni
+			cout << "unable to find result with precision " << PREC << endl;
+			break;
+		}
+		
+	}
+	
+	H_out.close();
+	mu_out.close();
+	sigma_out.close();
+	
+  return 0;
+}
+
+
+/**********************************************************************************************
+
+IMPLEMENTAZIONE FUNZIONI
+
+***********************************************************************************************/
+
+/*void InitializeRND(Random& rnd) {
+
+//Inizializzazione random generator
+   int seed[4];
+   int p1, p2;
+   ifstream Primes("Primes");
+   if (Primes.is_open()){
+      Primes >> p1 >> p2;
+   } else cerr << "PROBLEM: Unable to open Primes" << endl;
+   Primes.close();
+
+   ifstream input("seed.in");
+   string property;
+   if (input.is_open()){
+      while ( !input.eof() ){
+         input >> property;
+         if( property == "RANDOMSEED" ){
+            input >> seed[0] >> seed[1] >> seed[2] >> seed[3];
+            rnd.SetRandom(seed,p1,p2);
+         }
+      }
+      input.close();
+   } else cerr << "PROBLEM: Unable to open seed.in" << endl;
+   
+}
+
+
+double Psi(double x) {
+	double f1 = (x-mu)/(M_SQRT2*sigma);
+	double f2 = (x+mu)/(M_SQRT2*sigma);
+	double f = exp(-f1*f1) + exp(-f2*f2);
+	return f;
+};
+
+double Psi2(double x) {
+	double f1 = (x-mu)/(M_SQRT2*sigma);
+	double f2 = (x+mu)/(M_SQRT2*sigma);
+	double f = exp(-f1*f1) + exp(-f2*f2);
+	return f*f;
+};
+
+double derivative(double x) {
+  double alpha = pow((x+mu)/sigma,2);
+  double beta = pow((x-mu)/sigma,2);
+	return -0.5*1./sigma/sigma * ( alpha*exp(-alpha/2) + beta*exp(-beta/2) - exp(-alpha/2) - exp(-beta/2) ); 
+};
+
+double V(double x) {
+	return pow(x, 4) - 5*x*x/2;
+};
+
+double K(double x) {
+	return derivative(x)*hbar*hbar/(2*m*Psi(x));
+};
+
+double Eloc(double x) {
+	return V(x) + K(x);
+};
+
+
+calcolo dell'integrale:
+	* N: numero di blocchi che voglio usare per fare una singola stima dell'integrale
+	* M: numero totale di estrazioni che devo fare
+	* L: lunghezza del singolo blocco
+
+
+double Metropolis(Random& rnd, double x) {
+	attempted_met++;
+	double x_new = x + rnd.Rannyu(-delta,delta);
+  double p = fmin(1., Psi2(xnew)/Psi2(x) ); 
+  double y = rnd.Rannyu();
+  
+  if(thrw < p){
+    accepted_met++;
+    x = xnew;
+  }
+  
+  return x;
+};
+
+double Estrazione(Random& rnd, double& x) { //Integral -> Estrazione
+	x = Metropolis(rnd, x);									 //AvH -> Integral
+	return Eloc(x);
+};
+
+double Integral(Random &rnd, int M, int L, bool print){
+  int N = int(M/L);
+   
+  eq_step = 100;
+  double x = 1, sum; // Punto del campionamento con metropolis
+
+  // Equilibrazione
+  for(int i=0; i<eq_step; i++)
+    Estrazione(rnd, x);
+  
+  double avg=0, avg2=0, error;
+  for(int k = 0; k < N; k++) {
+  
+    sum = 0;
+    for(int j = 0; j < L; j++)
+      sum += Estrazione(rnd, x);
+  
+    sum = sum / L;
+    avg += sum; 
+  }
+
+  return avg/N;
+};*/
+
+//Evoluzione per l'algoritmo di annealing
+double Evol(Random &rnd, double beta) {
+	
+	muold = mu;
+	sigmaold = sigma;
+	double H = Integral(rnd, 70000, 1);
+	
+	mu += rnd.Rannyu(-delta_ann, delta_ann);
+	sigma += rnd.Rannyu(-delta_ann, delta_ann);
+	double Hnew = Integral(rnd, 70000, 1);
+	
+	if (Hnew < H) {
+		H = Hnew;
+		accepted_ann ++;
+	}
+	cout << "H - da Evol : " << H << endl;
+	return H;
+	//NON funzionava perchè stavi cambiando i due parametri in ogni caso, invece se l'annealing non è accettato i parametri non devono cambiare
+};
+
+
+//FUNZIONE CHE SVOLGE LA STATISTICA A BLOCCHI 
+template <typename T> double error( const vector<T> & AV, const vector<T> & AV2, int n) {
+
+	if (n==0)
+	  return 0;
+	else
+	  return sqrt((AV2[n] - pow(AV[n],2))/n);
+};
+
+//questa e quella dopo aggiunte ieri sera
+template <typename T> void Blocco(double sum, int L, vector<T>& ave, vector<T>& ave2) {
+		ave.push_back(sum/L);
+		ave2.push_back(pow(sum/L,2));
+};
+
+template <typename T> void Progressione(vector<T>& ave, vector<T>& ave2, vector<T>& sum_prog, vector<T>& sum2_prog, vector<T>& err_prog) {
+
+	double sum_ave=0;
+	double sum_ave2=0; 
+
+	for(int i=0; i<ave.size(); i++) {
+    sum_ave += ave.at(i);//sum_prog.at(i) += ave.at(j);
+    sum_ave2 += ave2.at(i);//sum2_prog.at(i) += ave2.at(j);
+  }	
+    
+    sum_ave /= (ave.size()+1);
+    sum_ave2 /= (ave.size()+1);
+    
+    sum_prog.push_back(sum_ave); //Cumulative average
+    sum2_prog.push_back(sum_ave2); //Cumulative square average
+    err_prog.push_back( error(sum_prog, sum2_prog, ave.size()) ); //Statistical uncertainty  
+
+}
+
+//STAMPARE I RISULTATI SU FILE
+template <typename T>void Print(const vector<T>& sum_prog, const vector<T>& err_prog, const vector<T>& ave, const vector<T>& err, const char* NomeFile) {
+	
+	ofstream out(NomeFile);
+	for(int i=0; i < sum_prog.size(); i++)
+		out << i << ", " << sum_prog.at(i) << ", " << err_prog.at(i) << ", " << ave.at(i) << ", " << err.at(i) << endl;
+	
+	out.close();
+};
+
+template <typename T>void PrintV(const vector<T>& vec, const char* NomeFile) {
+	
+	ofstream out(NomeFile);
+	for(long unsigned int i=0; i < vec.size(); i++)
+		out << vec.at(i) << endl;
+	
+	out.close();
+};
+

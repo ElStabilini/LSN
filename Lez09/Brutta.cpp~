@@ -1,0 +1,74 @@
+/*========================================		COST FUNCTION		=============================================*/
+
+class CostFunc{
+
+	public:
+	  virtual double eval() const = 0; //funzione scalare a variabili vettoriali 
+};										//prende come argomento un individuo quindi un vettore in cui ci sono degli elementi disposti con un certo ordine
+
+
+
+//eredita da cost Func
+class length : public CostFunc{
+
+	public:
+		
+		//costruttori
+  	length(posizione pos1, posizione pos2); //valutare di volta in volta se serve inserire dei parametri
+  	~length(); //distruttore
+
+  	virtual double eval() const; //io valuto la funzione costo sul singolo individuo
+
+	private:
+		posizione m_pos1;
+		posizione m_pos2;  
+};
+
+
+/*------------------------------ extra -------------------------------------*/
+
+/*int min_DNA(vector<individuo> ind) {
+
+	individuo i(ind.at(0).getRND(), ind.at(0).getLunghezza()); 
+	min = ind(0).getLunghezza();
+	
+	for(int i=0; i<ind.size(); i++)
+		if(ind.at(i).getLunghezza() < min)
+			min = ind.at(i).getLunghezza();
+	
+	return 1;	
+}
+
+vector<individuo> erase(vector<individuo> pop, int j) {
+	
+	vector<individuo> pop1;
+	for (int i=0; i<pop.size(); i++) {
+	 	if(i=j)
+	 		i++;
+	pop1.push_back(pop.at(i).duplica());
+	}
+	
+	return pop1;
+}*/
+
+
+//-------------------------------- CPP ----------------------------
+
+/*int min = min_DNA(m_pop);
+
+	if(min > lunghezza_DNA) {
+		cout << "l'informazione del DNA verrà aumentata, il DNA sarà di " << min " geni" <<endl;
+		lunghezza_DNA	= min;
+		m_lunghezza_DNA = lunghezza_DNA;
+	
+	} else if(min < lunghezza_DNA) {
+		cout << "l'informazione del DNA verrà ridotta, il DNA sarà di " << min " geni" <<endl;
+		lunghezza_DNA = min;
+		for(int i=0; i<m_pop.size(); i++) {
+			while(m_pop.at(i).getLunghezza() != lunghezza_DNA)
+				m_pop.at(i).erase(rnd->Int(0, m_pop.size()));
+		}
+		m_lunghezza_DNA = lunghezza_DNA;
+	} else {
+		m_lunghezza_DNA = lunghezza_DNA;
+	}*/

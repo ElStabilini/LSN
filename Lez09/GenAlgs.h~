@@ -1,0 +1,154 @@
+#ifndef _GEN_
+#define _GEN_
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <cstdio>
+#include "random.h"
+
+using namespace std;
+
+class Popolazione;
+class Individuo;
+class Percorso;
+struct Posizione;
+
+
+
+/*========================================		OGGETTI SPECIFICI		=============================================*/
+
+
+class Percorso {
+
+	public:
+
+		Percorso(Random* generatore, int numero_punti);
+		Percorso(string filename);
+		~Percorso();
+	
+		void quadrato (double l);
+		void CRF(double r);
+		double Distance(int index1, int index2) const;
+		double Misura_Lunghezza_Percorso(Individuo percorso);
+		
+		void Stampa(string filename) const;
+		void Schermo() const;
+	
+	private:
+	
+		int m_npos;
+		Random* m_rnd;
+		vector<Posizione> m_pos;
+};
+
+
+
+//contiene le coordinate della posizione
+struct Posizione{
+	double x;
+	double y;
+};
+
+/*===================================== ALGORITMI GENETICI ===============================================*/
+
+/*---------------- INDIVIDUO --------------------
+
+1. L'individuo possiede un DNA. 
+2. Il DNA contiene solo l'ORDINE con cui vengono visitate le città (è quindi un vettore di interi in ogni caso: contiene l'informazione su come sono disposti degli elementi).
+3. Ho una classe seprata per gli elementi che devo ordinare
+4. La misurazione del FIT avviene unendo l'informazione contenuta nella CLASSE ELEMENTO e quella contenuta nella CLASSE INDIVIDUO.
+6. FIT rimane comunque un metodo dell'individuo.
+7. Ho una popolazione solo per migliorare la variabilità genetica.
+8. Il risultato finale sarà fornito dal migliore individuo dell'ultima popolazione
+
+NOTA1: tutte le città vengono visitate una e una sola volta? controllare che tutti i numeri compaiano una e una sola volta all'interno del vettore DNA.
+NOTA2: ricordarsi di aggiungere la condizione che alla fine il saleman torni alla posizione iniziale
+
+---------------------------------------------*/
+
+class Individuo {
+
+	public:
+	
+		Individuo(Random* rnd, int lunghezza_DNA, vector<int> DNA);
+		Individuo(Random* rnd, int lunghezza_DNA);
+		Individuo Riproduzione(Individuo parent2);
+		Individuo Copia();
+		~Individuo();
+	
+		Random* GetRND() const;
+		vector<int> GetDNA() const;
+		int GetLunghezza() const;
+		int GetGene(int index) const;
+		vector<int> GetGenes (int index1, int index2) const;
+		double GetFit() const;
+	
+		void operator= (Individuo i);		
+
+		void Permutazione(int npermutazioni);
+		void Permutazione(int ext1, int ext2);
+		void Mutazione1();
+		void Mutazione2();
+		void Mutazione3();
+		void Shift();
+		void Vincoli();
+		void Fit(Percorso* p);
+	
+		void Schermo();
+		void Stampa(string nome_file);
+	
+	private:
+	
+		double m_fit;	
+		int m_lDNA;
+		Random* m_rnd;	
+		vector<int> m_DNA;			
+};
+
+
+
+
+
+
+class Popolazione {
+
+	public:
+
+		Popolazione(Random* generatore, Percorso* mappa, int n_individui, int lunghezza_DNA, double elite, double mut);
+	~Popolazione();
+	
+		Individuo GetInd(int index) const;
+		double GetMedia() const;
+		double GetStdev() const;
+		double GetBest() const;
+		double GetLunghezza() const;
+		double GetNindividui() const;
+		double GetSelect() const;
+		double GetMut() const;
+
+		void GeneraPop();
+		void Order();			
+		void NewGen(int n_accoppiamenti);
+		void Sostituisci(Individuo nuovo);	
+		void Schermo();
+		void Statistica();
+	
+	private:
+	
+		int m_nindividui;
+		int m_lDNA;
+		double m_media, m_stdev, m_best;
+		double m_selettivita, m_mutabilita;
+		Random* m_rnd;
+		Percorso* m_p;
+		vector<Individuo> m_pop;
+};
+
+
+
+
+
+
+
+#endif 
