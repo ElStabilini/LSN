@@ -1,0 +1,108 @@
+#ifndef __RANDOM__H
+#define __RANDOM__H
+
+#ifndef __FUNCTION__H
+#define __FUNCTION__H
+
+#define _USE_MATH_DEFINES
+
+#include <iostream>
+#include <fstream>
+#include <cmath>
+
+#include <vector>
+#include <string>
+
+#include "random.h"
+#include "function.cpp"
+
+using namespace std;
+ 
+int main (int argc, char *argv[]){
+
+   Random rnd;
+   int seed[4];
+   int p1, p2;
+
+   ifstream Primes("Primes");
+   if (Primes.is_open()){
+      Primes >> p1 >> p2 ;
+   } else cerr << "PROBLEM: Unable to open Primes" << endl;
+   Primes.close();
+
+   ifstream input("seed.in");
+   string property;
+   if (input.is_open()){
+      while ( !input.eof() ){
+         input >> property;
+         if( property == "RANDOMSEED" ){
+            input >> seed[0] >> seed[1] >> seed[2] >> seed[3];
+            rnd.SetRandom(seed,p1,p2);
+         }
+      }
+      input.close();
+   } else cerr << "PROBLEM: Unable to open seed.in" << endl;
+
+  
+//PRIMA PARTE - calcolo del valor medio dell'integrale rdr su [0,1] e calcolo della sua incertezza (deviazione standard della media per <r>)
+   
+   
+//define variables
+  long int M=100000; //numero totale dei lanci         
+  long int N=100; //numero di blocchi             
+	vector<double> r; //vettore che contiene i numeri estratti
+	vector<double> x; 
+	vector<double> ave; //medie di ciascun blocco
+	vector<double> ave2; 
+	vector<double> sum_prog; //medie progressive
+	vector<double> sum2_prog; 
+	vector<double> err_prog; //errore sui risultati progressivi
+	
+
+	for(int i=0; i<M; i++)
+		r.push_back(rnd.Rannyu()); 
+	
+	BlockStat(N, r, ave, ave2, sum_prog, sum2_prog, err_prog);
+	Print(sum_prog, err_prog, N, "Out1.dat");
+
+//SECONDA PARTE - Calcolo della varianza della distribuzione uniforme [0,1]
+
+	for(int i=0; i<M; i++)
+		r.at(i) = pow(rnd.Rannyu() - 0.5, 2);
+		
+	BlockStat(N, r, ave, ave2, sum_prog, sum2_prog, err_prog);
+	Print(sum_prog, err_prog, N, "Out2.dat");
+	
+
+//TERZA PARTE - Calcolo del \Chi^2
+	int bins = 100;
+	int prove = 100;
+	vector<int> bin;
+	vector<double> chi;
+	
+	for(int j=0; j<bins; j++)
+		bin.push_back(0);
+	
+	for(int i=0; i<prove; i++) {
+		for(int j=0; j<M; j++)
+			bin.at( int(floor(rnd.Rannyu()*bins)) )++;
+			
+		double sum =0;
+		for(int k=0; k<bins; k++)
+			sum += pow(bin.at(k)-M/bins, 2);
+			
+		chi.at(i)=bins*sum/M;			
+		for(int k=0; k<bins; k++)
+			bin.at(k)=0;
+	}
+			
+
+	PrintV(chi, "Out3.dat");
+
+  rnd.SaveSeed();
+    
+  return 0;
+}
+
+#endif
+#endif

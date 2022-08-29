@@ -1,0 +1,164 @@
+#ifndef __RANDOM__H
+#define __RANDOM__H
+
+#ifndef __FUNCTION__H
+#define __FUNCTION__H
+
+#define _USE_MATH_DEFINES
+
+#include <iostream>
+#include <fstream>
+
+#include <vector>
+#include <string>
+#include <cmath>
+
+#include "random.h"
+#include "function.cpp"
+
+using namespace std;
+
+int main (int argc, char *argv[]){
+
+   Random rnd;
+   int seed[4];
+   int p1, p2;
+   ifstream Primes("Primes");
+   if (Primes.is_open()){
+      Primes >> p1 >> p2;
+   } else cerr << "PROBLEM: Unable to open Primes" << endl;
+   Primes.close();
+
+   ifstream input("seed.in");
+   string property;
+   if (input.is_open()){
+      while ( !input.eof() ){
+         input >> property;
+         if( property == "RANDOMSEED" ){
+            input >> seed[0] >> seed[1] >> seed[2] >> seed[3];
+            rnd.SetRandom(seed,p1,p2);
+         }
+      }
+      input.close();
+   } else cerr << "PROBLEM: Unable to open seed.in" << endl;
+   
+ 
+/*===============================================================================================
+IDEA:
+
+Realizzazione  SINGOLO esperimento: 
+*le linee sono immaginate come linee verticali distanziate di una unità d (o eventualmente multipli dell'unità)
+*genero due coppie di coordinate cartesiane in maniera casuale
+*verifico se la coppia appartiene a una linea 
+	*se sì -> successo
+	*se no
+		*genero un'altra coppia (verifico se appartiene a una linea)
+		*valuto se x_linea sta in delta x
+		
+Creazione blocchi:
+	*vettore x -> numero dei blocchi = lunghezza di x
+	* 
+
+NOTA: 
+*creare una classe punto (fatta da una coppia di coordinate, vedi se ne hai già una)
+*
+================================================================================================*/
+   
+   //define variables
+   double d = 1;
+   double L = (d - 0.223);
+   double M = 100000; //numero di coordinate che devo estrarre (una cartesiana e una angolare)
+	 double Nth=500;
+   int Lbox=int(M/Nth); //numero di elementi per blocco
+   
+   vector<double> x; //numero di lanci (ovvero numero di blocchi)
+   vector<double> pi_ave; //vettore di N valori - contiene le medie di ciascun blocco
+   vector<double> pi_ave2; //vettore con gli stessi elementi ma al quadrato
+   vector<double> pi_sum; //questo vettore deve contenere le stime PROGRESSIVE di pi
+   vector<double> pi_sum2; //contiene gli stessi elementi ma al quadrato
+   vector<double> err_prog; //errore sui risultati progressivi
+   
+   vector<double> x1;
+   vector<double> y2;
+   vector<double> x2;
+   //vector<double> Pave;
+   
+   ofstream out("Out1_3");
+   //ofstream out1("pi");
+   //ofstream out2("recap");
+      
+   for(int i=0; i<Nth; i++)
+   	x.push_back(i); //creo il vettore [0,...,Nth-1]
+   	
+   for(int i=0; i<M; i++) {
+		x1.push_back(rnd.Rannyu()); //riempio r con M numeri casuali (estraggo una coordinata x - sarà il centro della circonferenza-)
+		y2.push_back(rnd.Rannyu(-L,L));
+	 }
+
+//=====================================================================================   	
+  
+
+	 for(int i=0; i<M; i++) {
+		 if(abs(y2[i]) == L) {//se la coordinata y è (+-)L allora la sbarretta è verticale
+			 x2.push_back(x1[i]);
+			 }
+		 else {
+		//direzione: prendo casualmente una direzione tra destra e sinistra (estraggo g, se g
+			 double g = rnd.Rannyu(-1,1);
+			 if (g>0) {
+				 //prendo la coordinata destra quindi considero la cooridinata positiva
+				 x2.push_back(sqrt(pow(L,2)-pow(y2[i],2))); 
+				 }
+			 else {
+				 //prendo la coordinata sinistra
+				 x2.push_back(-sqrt( pow(L,2) - pow(y2[i],2) ));
+				 }
+		 }
+	 }	
+	 
+	 
+//=====================================================================================
+   
+  
+   for(int i=0; i<Nth; i++) {
+    double succ=0;
+    for(int j=0; j<Lbox; j++){ //aggiorno il valore della somma e della somma quadrata
+    	double k = j+i*Lbox;
+		 	if (Lancio(x1[k], x2[k], y2[k]) == true)
+		 		succ += 1;
+    }
+    pi_ave.push_back((2*L*Lbox)/succ); //probabilità per ciascun box
+    pi_ave2.push_back( (pow(pi_ave[i],2)) );
+    
+  }
+
+
+//DA QUI IN AVANTI LAVORO SUI BLOCCHI
+	for(int i=0; i<Nth; i++) {
+		pi_sum.push_back(0);
+    pi_sum2.push_back(0);
+		for(int j=0; j<i+1; j++) {
+    	pi_sum[i] += pi_ave[j];
+    	pi_sum2[i] += pi_ave2[j];
+    }
+
+   //PROMEMORIA PER ME: chiedere conferma su quello che sto facendo
+    pi_sum[i]/=(i+1); //Cumulative average
+    pi_sum2[i]/=(i+1); //Cumulative square average
+    err_prog.push_back( error(pi_sum, pi_sum2, i) ); //Statistical uncertainty  
+  }
+
+   
+//stampo i risultati in colonna separati da una ,
+ 	for(int i=0; i<Nth; i++)
+ 		out << x[i] << ", " << pi_sum[i] << ", " << err_prog[i] << endl; 
+ 		
+ 	out.close(); 
+ 	/*out1.close(); 
+ 	out2.close();*/
+  rnd.SaveSeed();  
+   
+  return 0;
+}
+
+#endif
